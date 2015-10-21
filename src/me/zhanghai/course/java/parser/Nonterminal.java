@@ -10,7 +10,15 @@ package me.zhanghai.course.java.parser;
  */
 public class Nonterminal extends Symbol {
 
-    public Nonterminal(Enum<?> type) {
+    Nonterminal(Enum<?> type) {
         super(type);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return "Nonterminal{} " + super.toString();
     }
 }

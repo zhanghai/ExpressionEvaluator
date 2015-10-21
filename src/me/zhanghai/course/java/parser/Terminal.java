@@ -12,13 +12,7 @@ public class Terminal extends Symbol {
 
     private String text;
 
-    /**
-     * Create a new {@link Terminal}.
-     *
-     * @param type The identifying {@link Enum} for this type of terminal.
-     * @param text The text from which this token is lexed.
-     */
-    public Terminal(Enum<?> type, String text) {
+    Terminal(Enum<?> type, String text) {
         super(type);
         this.text = text;
     }
@@ -30,5 +24,15 @@ public class Terminal extends Symbol {
      */
     public String getText() {
         return text;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return "Terminal{" +
+                "text='" + text + '\'' +
+                "} " + super.toString();
     }
 }

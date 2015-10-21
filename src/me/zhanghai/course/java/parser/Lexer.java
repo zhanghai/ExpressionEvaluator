@@ -5,6 +5,7 @@
 
 package me.zhanghai.course.java.parser;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 
@@ -16,50 +17,41 @@ import java.util.regex.Matcher;
  */
 public class Lexer {
 
-    private String input;
-    private List<TerminalDefinition> definitions;
-
-    private int position;
-
-    private Lexer(String input, List<TerminalDefinition> definitions) {
-        this.input = input;
-        this.definitions = definitions;
-    }
+    private Lexer() {}
 
     /**
-     * Return a new {@link Lexer} on an input string.
+     * Return a list of terminals derived from the input string.
      *
      * @param input The input string.
-     * @param definitions Definitions of possible tokens.
-     * @return The new {@link Lexer}.
+     * @param definitionList Definitions of tokens.
+     * @return A list of terminals.
+     * @throws IllegalInputException If any input cannot be lexed.
      */
-    public static Lexer lex(String input, List<TerminalDefinition> definitions) {
-        return new Lexer(input, definitions);
-    }
+    public static List<Terminal> lex(String input, List<TerminalDefinition> definitionList)
+            throws IllegalInputException {
 
-    /**
-     * Return the next token from the input string. Throws an {@link IllegalInputException} if
-     * remaining input cannot be lexed.
-     *
-     * @return The next token.
-     * @throws IllegalInputException If remaining input cannot be lexed.
-     */
-    public Terminal next() throws IllegalInputException {
+        int position = 0;
+        List<Terminal> terminalList = new ArrayList<>();
 
-        if (position == input.length()) {
-            return null;
-        }
-
-        for (TerminalDefinition terminalDefinition : definitions) {
-            Matcher matcher = terminalDefinition.getMatcher(input).region(position, input.length());
-            if (matcher.lookingAt()) {
-                String text = matcher.group();
-                position += text.length();
-                return new Terminal(terminalDefinition.getType(), text);
+        while (position < input.length()) {
+            boolean matched = false;
+            for (TerminalDefinition terminalDefinition : definitionList) {
+                Matcher matcher = terminalDefinition.getMatcher(input)
+                        .region(position, input.length());
+                if (matcher.lookingAt()) {
+                    String text = matcher.group();
+                    terminalList.add(new Terminal(terminalDefinition.getType(), text));
+                    position += text.length();
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                throw new IllegalInputException("Unable to lex input \"" + input + "\" at position "
+                        + position);
             }
         }
 
-        throw new IllegalInputException("Unable to lex input \"" + input + "\" at position "
-                + position);
+        return terminalList;
     }
 }

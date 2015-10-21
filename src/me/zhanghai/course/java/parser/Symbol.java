@@ -12,12 +12,7 @@ public abstract class Symbol {
 
     private Enum<?> type;
 
-    /**
-     * Create a new {@link Symbol}.
-     *
-     * @param type The identifying {@link Enum} for this type of symbol.
-     */
-    public Symbol(Enum<?> type) {
+    Symbol(Enum<?> type) {
         this.type = type;
     }
 
@@ -28,5 +23,15 @@ public abstract class Symbol {
      */
     public Enum<?> getType() {
         return type;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return "Symbol{" +
+                "type=" + type +
+                '}';
     }
 }
