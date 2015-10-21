@@ -17,18 +17,25 @@ import java.util.regex.Matcher;
  */
 public class Lexer {
 
-    private Lexer() {}
+    private List<TerminalDefinition> definitionList;
+
+    /**
+     * Create a new {@link Lexer}.
+     *
+     * @param definitionList Definitions of tokens.
+     */
+    public Lexer(List<TerminalDefinition> definitionList) {
+        this.definitionList = definitionList;
+    }
 
     /**
      * Return a list of terminals derived from the input string.
      *
      * @param input The input string.
-     * @param definitionList Definitions of tokens.
      * @return A list of terminals.
      * @throws IllegalInputException If any input cannot be lexed.
      */
-    public static List<Terminal> lex(String input, List<TerminalDefinition> definitionList)
-            throws IllegalInputException {
+    public List<Terminal> lex(String input) throws IllegalInputException {
 
         int position = 0;
         List<Terminal> terminalList = new ArrayList<>();

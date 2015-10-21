@@ -13,10 +13,7 @@ import java.util.regex.Pattern;
 public enum ExpressionTerminal implements TerminalDefinition {
 
     NUMBER("\\d+"),
-    ADD("\\+"),
-    SUBTRACT("-"),
-    MULTIPLY("\\*"),
-    DIVIDE("/"),
+    BINARY_OPERATOR("(\\+|-|\\*|/)"),
     LEFT_PARENTHESIS("\\("),
     RIGHT_PARENTHESIS("\\)");
 

@@ -14,22 +14,30 @@ import java.util.Map;
  */
 public class Parser {
 
-    private Parser() {}
+    private Map<Enum<?>, List<List<Enum<?>>>> ruleSet;
+    private Enum<?> startSymbolType;
+
+    /**
+     * Create a new {@link Parser}.
+     *
+     * @param ruleSet The rules for parsing non-terminals.
+     * @param startSymbolType The symbol type to start with.
+     */
+    public Parser(Map<Enum<?>, List<List<Enum<?>>>> ruleSet, Enum<?> startSymbolType) {
+        this.ruleSet = ruleSet;
+        this.startSymbolType = startSymbolType;
+    }
 
     /**
      * Return a parse tree derived from the input terminals.
      *
      * @param terminals The list of terminals.
-     * @param ruleSet The rules for parsing; terminals has an empty rule list.
-     * @param startSymbolType The symbol type to start with.
      * @return A parse tree.
      * @throws IllegalInputException If any input cannot be parsed.
      */
-    public static ParseTreeNode parse(List<Terminal> terminals,
-                                      Map<Enum<?>, List<List<Enum<?>>>> ruleSet,
-                                      Enum<?> startSymbolType) throws IllegalInputException {
+    public ParseTreeNode parse(List<Terminal> terminals) throws IllegalInputException {
 
-        ParseResult result = parseInternal(terminals, 0, ruleSet, startSymbolType);
+        ParseResult result = parseInternal(terminals, 0, startSymbolType);
         if (result.position != terminals.size()) {
             throw new IllegalInputException("Not all terminals are consumed, "
                     + (terminals.size() - result.position) + " remaining.");
@@ -38,9 +46,8 @@ public class Parser {
         return result.node;
     }
 
-    private static ParseResult parseInternal(List<Terminal> terminalList, int position,
-                                               Map<Enum<?>, List<List<Enum<?>>>> ruleSet,
-                                               Enum<?> targetSymbolType)
+    private ParseResult parseInternal(List<Terminal> terminalList, int position,
+                                             Enum<?> targetSymbolType)
             throws IllegalInputException {
 
         // Check end of input.
@@ -57,27 +64,29 @@ public class Parser {
 
         // Parse by rules.
         List<List<Enum<?>>> ruleList = ruleSet.get(targetSymbolType);
-        // Allocate only one ArrayList before the loop.
-        ArrayList<ParseTreeNode> children = new ArrayList<>();
-        for (List<Enum<?>> rule : ruleList) {
-            boolean matched = true;
-            children.clear();
-            int nextPosition = position;
-            for (Enum<?> ruleTargetSymbolType : rule) {
-                try {
-                    ParseResult result = parseInternal(terminalList, nextPosition, ruleSet,
-                            ruleTargetSymbolType);
-                    children.add(result.node);
-                    nextPosition = result.position;
-                } catch (IllegalInputException e) {
-                    matched = false;
-                    break;
+        if (ruleList != null) {
+            // Allocate only one ArrayList before the loop.
+            ArrayList<ParseTreeNode> children = new ArrayList<>();
+            for (List<Enum<?>> rule : ruleList) {
+                boolean matched = true;
+                children.clear();
+                int nextPosition = position;
+                for (Enum<?> ruleTargetSymbolType : rule) {
+                    try {
+                        ParseResult result = parseInternal(terminalList, nextPosition,
+                                ruleTargetSymbolType);
+                        children.add(result.node);
+                        nextPosition = result.position;
+                    } catch (IllegalInputException e) {
+                        matched = false;
+                        break;
+                    }
                 }
-            }
-            if (matched) {
-                // Successful match.
-                return new ParseResult(new ParseTreeNode(
-                        new Nonterminal(targetSymbolType), children), nextPosition);
+                if (matched) {
+                    // Successful match.
+                    return new ParseResult(new ParseTreeNode(
+                            new Nonterminal(targetSymbolType), children), nextPosition);
+                }
             }
         }
 
