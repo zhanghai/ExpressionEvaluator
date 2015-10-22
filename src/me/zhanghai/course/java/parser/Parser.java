@@ -31,23 +31,16 @@ public class Parser {
     /**
      * Return a parse tree derived from the input terminals.
      *
-     * @param terminals The list of terminals.
+     * @param terminalList The list of terminals.
      * @return A parse tree.
      * @throws IllegalInputException If any input cannot be parsed.
      */
-    public ParseTreeNode parse(List<Terminal> terminals) throws IllegalInputException {
-
-        ParseResult result = parseInternal(terminals, 0, startSymbolType);
-        if (result.position != terminals.size()) {
-            throw new IllegalInputException("Not all terminals are consumed, "
-                    + (terminals.size() - result.position) + " remaining.");
-        }
-
-        return result.node;
+    public ParseTreeNode parse(List<Terminal> terminalList) throws IllegalInputException {
+        return parseInternal(terminalList, 0, startSymbolType, true).node;
     }
 
     private ParseResult parseInternal(List<Terminal> terminalList, int position,
-                                             Enum<?> targetSymbolType)
+                                      Enum<?> targetSymbolType, boolean shouldConsumeAll)
             throws IllegalInputException {
 
         // Check end of input.
@@ -59,6 +52,11 @@ public class Parser {
         // Test for a direct match.
         Terminal firstTerminal = terminalList.get(position);
         if (firstTerminal.getType() == targetSymbolType) {
+            if (shouldConsumeAll && position < terminalList.size() - 1) {
+                throw new IllegalInputException(
+                        "Cannot consume all the input because target symbol type is terminal "
+                                + targetSymbolType + " at position " + position);
+            }
             return new ParseResult(new ParseTreeNode(firstTerminal), position + 1);
         }
 
@@ -71,10 +69,10 @@ public class Parser {
                 boolean matched = true;
                 children.clear();
                 int nextPosition = position;
-                for (Enum<?> ruleTargetSymbolType : rule) {
+                for (int i = 0; i < rule.size(); ++i) {
                     try {
                         ParseResult result = parseInternal(terminalList, nextPosition,
-                                ruleTargetSymbolType);
+                                rule.get(i), shouldConsumeAll && i == rule.size() - 1);
                         children.add(result.node);
                         nextPosition = result.position;
                     } catch (IllegalInputException e) {
@@ -91,7 +89,7 @@ public class Parser {
         }
 
         throw new IllegalInputException("No applicable rule to parse symbol type "
-                + targetSymbolType + ", at position " + position);
+                + targetSymbolType + " at position " + position);
     }
 
     private static class ParseResult {
