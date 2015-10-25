@@ -6,7 +6,7 @@
 package me.zhanghai.course.java.parser;
 
 /**
- * Exception thrown by a {@link Lexer} or {@link Parser} to signal bad input.
+ * Exception thrown by a {@link Tokenizer} or {@link OperatorPrecedenceParser} to signal bad input.
  */
 public class IllegalInputException extends Exception {
 

@@ -5,12 +5,12 @@
 
 package me.zhanghai.course.java;
 
-import me.zhanghai.course.java.parser.TerminalDefinition;
+import me.zhanghai.course.java.parser.TokenDefinition;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public enum ExpressionTerminal implements TerminalDefinition {
+public enum ExpressionToken implements TokenDefinition {
 
     NUMBER("\\d+"),
     BINARY_OPERATOR("(\\+|-|\\*|/)"),
@@ -19,7 +19,7 @@ public enum ExpressionTerminal implements TerminalDefinition {
 
     private Matcher matcher;
 
-    ExpressionTerminal(String regex) {
+    ExpressionToken(String regex) {
         matcher = Pattern.compile(regex).matcher("");
     }
 
@@ -27,7 +27,7 @@ public enum ExpressionTerminal implements TerminalDefinition {
      * {@inheritDoc}
      */
     @Override
-    public ExpressionTerminal getType() {
+    public ExpressionToken getIdentifier() {
         return this;
     }
 

@@ -19,10 +19,10 @@ public enum ExpressionNonterminal {
     static {
         RULE_SET = new HashMap<>();
         RULE_SET.put(EXPRESSION, Arrays.asList(
-                asList(ExpressionTerminal.LEFT_PARENTHESIS, ExpressionNonterminal.EXPRESSION,
-                        ExpressionTerminal.RIGHT_PARENTHESIS),
-                asList(ExpressionTerminal.NUMBER),
-                asList(ExpressionNonterminal.EXPRESSION, ExpressionTerminal.BINARY_OPERATOR,
+                asList(ExpressionToken.LEFT_PARENTHESIS, ExpressionNonterminal.EXPRESSION,
+                        ExpressionToken.RIGHT_PARENTHESIS),
+                asList(ExpressionToken.NUMBER),
+                asList(ExpressionNonterminal.EXPRESSION, ExpressionToken.BINARY_OPERATOR,
                         ExpressionNonterminal.EXPRESSION)));
     }
 

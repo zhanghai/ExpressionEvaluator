@@ -10,20 +10,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A simple LALR(n) parser implementation.
+ * A simple shunting-yard algorithm operator-precedence parser implementation.
  */
-public class Parser {
+public class OperatorPrecedenceParser {
 
     private Map<Enum<?>, List<List<Enum<?>>>> ruleSet;
     private Enum<?> startSymbolType;
 
     /**
-     * Create a new {@link Parser}.
+     * Create a new {@link OperatorPrecedenceParser}.
      *
      * @param ruleSet The rules for parsing non-terminals.
      * @param startSymbolType The symbol type to start with.
      */
-    public Parser(Map<Enum<?>, List<List<Enum<?>>>> ruleSet, Enum<?> startSymbolType) {
+    public OperatorPrecedenceParser(Map<Enum<?>, List<List<Enum<?>>>> ruleSet, Enum<?> startSymbolType) {
         this.ruleSet = ruleSet;
         this.startSymbolType = startSymbolType;
     }
