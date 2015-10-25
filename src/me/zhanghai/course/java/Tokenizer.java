@@ -3,27 +3,39 @@
  * All Rights Reserved.
  */
 
-package me.zhanghai.course.java.parser;
+package me.zhanghai.course.java;
 
-import java.util.List;
 import java.util.regex.Matcher;
 
 /**
  * A simple stateless and whitespace-ignoring tokenizer implementation.
+ *
+ * @param <T> The type of token definition.
  */
-public class Tokenizer {
+public class Tokenizer<T extends Tokenizer.Definition> {
 
-    private Tokenizer() {}
+    private T[] definitions;
+    private Listener<T> listener;
+
+    private boolean canceled;
+
+    /**
+     * Create a new {@link Tokenizer}.
+     *
+     * @param definitions definitions Definitions of tokens.
+     * @param listener Listener for new token, tokenization completion or failure.
+     */
+    public Tokenizer(T[] definitions, Listener<T> listener) {
+        this.definitions = definitions;
+        this.listener = listener;
+    }
 
     /**
      * Tokenize an input string.
      *
      * @param input The input string.
-     * @param definitionList Definitions of tokens.
-     * @param listener Listener for new token, tokenization completion or failure.
      */
-    public static void tokenize(String input, List<Definition> definitionList,
-                                Listener listener) {
+    public void tokenize(String input) {
 
         int position = 0;
 
@@ -37,14 +49,17 @@ public class Tokenizer {
             }
 
             boolean matched = false;
-            for (Definition definition : definitionList) {
+            for (T definition : definitions) {
                 Matcher matcher = definition.getMatcher(input)
                         .region(position, input.length());
                 if (matcher.lookingAt()) {
                     String text = matcher.group();
-                    listener.onToken(definition.getIdentifier(), text);
                     position += text.length();
                     matched = true;
+                    listener.onToken(definition, text);
+                    if (canceled) {
+                        return;
+                    }
                     break;
                 }
             }
@@ -55,20 +70,29 @@ public class Tokenizer {
             }
         }
 
-        listener.onCompleted();
+        if (!canceled) {
+            listener.onCompleted();
+        }
+    }
+
+    /**
+     * Cancel the tokenization; listener won't be called any more until next tokenization.
+     */
+    public void cancel() {
+        canceled = true;
+    }
+
+    /**
+     * Reset this tokenizer for next tokenization.
+     */
+    public void reset() {
+        canceled = false;
     }
 
     /**
      * Definition of one type of token.
      */
     public interface Definition {
-
-        /**
-         * Get the identifier for this type of token.
-         *
-         * @return The identifier.
-         */
-        Enum<?> getIdentifier();
 
         /**
          * Retrieve a matcher against specified input for this token.
@@ -85,16 +109,15 @@ public class Tokenizer {
     /**
      * Listener for new token, tokenization completion or failure.
      */
-    public interface Listener {
+    public interface Listener<T> {
 
         /**
          * Called when a new token is available.
          *
-         * @param identifier The identifier of the new token, as in
-         *                   {@link Definition#getIdentifier()}.
+         * @param definition The definition of the new token.
          * @param text The text of the new token.
          */
-        void onToken(Enum<?> identifier, String text);
+        void onToken(T definition, String text);
 
         /**
          * Called when tokenization completed.

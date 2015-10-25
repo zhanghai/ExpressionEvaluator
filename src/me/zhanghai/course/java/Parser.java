@@ -3,43 +3,40 @@
  * All Rights Reserved.
  */
 
-package me.zhanghai.course.java.parser;
+package me.zhanghai.course.java;
 
 import java.util.LinkedList;
 
 /**
  * A simple shunting-yard algorithm operator-precedence parser implementation, according to
  * <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">Shunting-yard algorithm - Wikipedia, the free encyclopedia</a>.
+ *
+ * @param <T> The type of token.
  */
-public class OperatorPrecedenceParser {
+public class Parser<T extends Parser.Token> {
 
+    private boolean canceled;
     private boolean failed;
-    private LinkedList<Token> stack = new LinkedList<>();
-    private Listener listener;
+    private LinkedList<T> stack = new LinkedList<>();
+    private Listener<T> listener;
 
     /**
-     * Create a new {@link OperatorPrecedenceParser}.
+     * Create a new {@link Parser}.
      *
      * @param listener Listener for output, parse completion or failure.
      */
-    public OperatorPrecedenceParser(Listener listener) {
+    public Parser(Listener<T> listener) {
         this.listener = listener;
     }
 
-    private void checkFailed() {
-        if (failed) {
-            throw new IllegalStateException("Parse has already failed on a previous token");
-        }
-    }
+    /**
+     * Feed this parser with the next token.
+     *
+     * @param token The next token.
+     */
+    public void onNextToken(T token) {
 
-    private void notifyFailed(Token token, Failure failure) {
-        failed = true;
-        listener.onFailed(token, failure);
-    }
-
-    public void onNextToken(Token token) {
-
-        checkFailed();
+        checkCanceledOrFailed();
 
         Definition definition = token.getDefinition();
         switch (definition.getType()) {
@@ -80,13 +77,15 @@ public class OperatorPrecedenceParser {
                 // then pop o2 off the operator stack, onto the output queue.
                 while (!stack.isEmpty()) {
                     Definition topDefinition = stack.peek().getDefinition();
-                    if (topDefinition.getType() != Type.OPERATOR) {
-                        break;
-                    } else if ((definition.getAssociativity() == Associativity.LEFT
-                                && definition.getPrecedence() <= topDefinition.getPrecedence())
-                            || (definition.getAssociativity() == Associativity.RIGHT
-                                && definition.getPrecedence() < topDefinition.getPrecedence())) {
+                    if (topDefinition.getType() == Type.OPERATOR
+                            && ((definition.getAssociativity() == Associativity.LEFT
+                                    && definition.getPrecedence() <= topDefinition.getPrecedence())
+                                || (definition.getAssociativity() == Associativity.RIGHT
+                                    && definition.getPrecedence() < topDefinition.getPrecedence()))
+                            ) {
                         listener.onOutput(stack.pop());
+                    } else {
+                        break;
                     }
                 }
                 // Push o1 onto the operator stack.
@@ -112,9 +111,12 @@ public class OperatorPrecedenceParser {
                         break;
                     } else {
                         listener.onOutput(stack.pop());
+                        if (canceled) {
+                            break;
+                        }
                     }
                 }
-                if (failed) {
+                if (canceled || failed) {
                     break;
                 }
                 // Pop the left parenthesis from the stack, but not onto the output queue.
@@ -128,9 +130,12 @@ public class OperatorPrecedenceParser {
         }
     }
 
+    /**
+     * Tell this parser to complete the parse.
+     */
     public void onNoMoreToken() {
 
-        checkFailed();
+        checkCanceledOrFailed();
 
         // While there are still operator tokens in the stack:
         while (!stack.isEmpty()) {
@@ -139,16 +144,44 @@ public class OperatorPrecedenceParser {
             Type type = stack.peek().getDefinition().getType();
             if (type == Type.LEFT_PARENTHESIS || type == Type.RIGHT_PARENTHESIS) {
                 notifyFailed(null, Failure.MISMATCHED_PARENTHESIS);
-                break;
+                return;
             }
             // Pop the operator onto the output queue.
             listener.onOutput(stack.pop());
+            if (canceled) {
+                return;
+            }
         }
 
         listener.onCompleted();
     }
 
+    private void checkCanceledOrFailed() {
+        if (canceled) {
+            throw new IllegalStateException("Parse has already been canceled");
+        }
+        if (failed) {
+            throw new IllegalStateException("Parse has already failed on a previous token");
+        }
+    }
+
+    /**
+     * Cancel the parse; listener won't be called any more until next parse.
+     */
+    public void cancel() {
+        canceled = true;
+    }
+
+    private void notifyFailed(T token, Failure failure) {
+        failed = true;
+        listener.onFailed(token, failure);
+    }
+
+    /**
+     * Reset this parser for next parse.
+     */
     public void reset() {
+        canceled = false;
         failed = false;
         stack.clear();
     }
@@ -223,14 +256,14 @@ public class OperatorPrecedenceParser {
     /**
      * Listener for output, parse completion or failure.
      */
-    public interface Listener {
+    public interface Listener<T> {
 
         /**
          * Called upon output of a token.
          *
          * @param token The token.
          */
-        void onOutput(Token token);
+        void onOutput(T token);
 
         /**
          * Called when parse completed.
@@ -244,6 +277,6 @@ public class OperatorPrecedenceParser {
          *              completing the parse.
          * @param failure The failure occurred.
          */
-        void onFailed(Token token, Failure failure);
+        void onFailed(T token, Failure failure);
     }
 }

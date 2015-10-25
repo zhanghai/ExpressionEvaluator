@@ -5,29 +5,49 @@
 
 package me.zhanghai.course.java;
 
-import me.zhanghai.course.java.parser.IllegalInputException;
-import me.zhanghai.course.java.parser.Tokenizer;
-import me.zhanghai.course.java.parser.OperatorPrecedenceParser;
-
-import java.util.Arrays;
-import java.util.List;
+import java.text.DecimalFormat;
 import java.util.Scanner;
 
 public class Main {
 
     public static void main(String[] args) {
+
         Scanner scanner = new Scanner(System.in);
-        Tokenizer tokenizer = new Tokenizer(Arrays.<Tokenizer.Definition>asList(ExpressionToken.values()));
-        OperatorPrecedenceParser parser = new OperatorPrecedenceParser(ExpressionNonterminal.RULE_SET,
-                ExpressionNonterminal.START_SYMBOL_TYPE);
+        Evaluator evaluator = new Evaluator(new EvaluatorListener());
+
         while (scanner.hasNextLine()) {
             String input = scanner.nextLine();
-            try {
-                List<MathToken> terminalList = tokenizer.lex(input);
-                parser.parse(terminalList);
-            } catch (IllegalInputException e) {
-                e.printStackTrace();
-            }
+            evaluator.evaluate(input);
+        }
+    }
+
+    private static class EvaluatorListener implements Evaluator.Listener {
+
+        private DecimalFormat decimalFormat;
+
+        public EvaluatorListener() {
+            decimalFormat = new DecimalFormat();
+            decimalFormat.setMaximumFractionDigits(10);
+        }
+
+        @Override
+        public void onEvaluated(double result) {
+            System.out.println(decimalFormat.format(result));
+        }
+
+        @Override
+        public void onTokenizationFailed(int position) {
+            System.err.println("Tokenization failed at position: " + position);
+        }
+
+        @Override
+        public void onParseFailed(Token token, Parser.Failure failure) {
+            System.err.println("Parse failed for token: " + token + ", because of " + failure);
+        }
+
+        @Override
+        public void onFailed(String cause) {
+            System.err.println("Evaluation failed: " + cause);
         }
     }
 }
