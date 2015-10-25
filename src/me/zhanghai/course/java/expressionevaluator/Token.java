@@ -3,7 +3,7 @@
  * All Rights Reserved.
  */
 
-package me.zhanghai.course.java;
+package me.zhanghai.course.java.expressionevaluator;
 
 /**
  * Token.
