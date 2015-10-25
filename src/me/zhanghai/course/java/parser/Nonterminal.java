@@ -8,10 +8,12 @@ package me.zhanghai.course.java.parser;
 /**
  * A nonterminal symbol.
  */
-public class Nonterminal extends Symbol {
+public class Nonterminal {
+
+    private Enum<?> type;
 
     Nonterminal(Enum<?> type) {
-        super(type);
+        this.type = type;
     }
 
     /**
@@ -19,6 +21,15 @@ public class Nonterminal extends Symbol {
      */
     @Override
     public String toString() {
-        return "Nonterminal{} " + super.toString();
+        return "Nonterminal{} " + toString();
+    }
+
+    /**
+     * Get the identifying {@link Enum} for this type of symbol.
+     *
+     * @return The identifying {@link Enum} for this type of symbol.
+     */
+    public Enum<?> getType() {
+        return type;
     }
 }

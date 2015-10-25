@@ -5,101 +5,245 @@
 
 package me.zhanghai.course.java.parser;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.LinkedList;
 
 /**
- * A simple shunting-yard algorithm operator-precedence parser implementation.
+ * A simple shunting-yard algorithm operator-precedence parser implementation, according to
+ * <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">Shunting-yard algorithm - Wikipedia, the free encyclopedia</a>.
  */
 public class OperatorPrecedenceParser {
 
-    private Map<Enum<?>, List<List<Enum<?>>>> ruleSet;
-    private Enum<?> startSymbolType;
+    private boolean failed;
+    private LinkedList<Token> stack = new LinkedList<>();
+    private Listener listener;
 
     /**
      * Create a new {@link OperatorPrecedenceParser}.
      *
-     * @param ruleSet The rules for parsing non-terminals.
-     * @param startSymbolType The symbol type to start with.
+     * @param listener Listener for output, parse completion or failure.
      */
-    public OperatorPrecedenceParser(Map<Enum<?>, List<List<Enum<?>>>> ruleSet, Enum<?> startSymbolType) {
-        this.ruleSet = ruleSet;
-        this.startSymbolType = startSymbolType;
+    public OperatorPrecedenceParser(Listener listener) {
+        this.listener = listener;
+    }
+
+    private void checkFailed() {
+        if (failed) {
+            throw new IllegalStateException("Parse has already failed on a previous token");
+        }
+    }
+
+    private void notifyFailed(Token token, Failure failure) {
+        failed = true;
+        listener.onFailed(token, failure);
+    }
+
+    public void onNextToken(Token token) {
+
+        checkFailed();
+
+        Definition definition = token.getDefinition();
+        switch (definition.getType()) {
+
+            case NUMBER:
+                // Add it to the output queue.
+                listener.onOutput(token);
+                break;
+
+            case FUNCTION:
+                // Push it onto the stack.
+                stack.push(token);
+                break;
+
+            case FUNCTION_ARGUMENT_SEPARATOR:
+                // Until the token at the top of the stack is a left parenthesis, pop operators off
+                // the stack onto the output queue.
+                while (true) {
+                    if (stack.isEmpty()) {
+                        // If no left parentheses are encountered, either the separator was
+                        // misplaced or parentheses were mismatched.
+                        notifyFailed(token, Failure.MISPLACE_SEPARATOR_OR_MISMATCHED_PARENTHESIS);
+                        break;
+                    }
+                    if (stack.peek().getDefinition().getType() == Type.LEFT_PARENTHESIS) {
+                        break;
+                    } else {
+                        listener.onOutput(stack.pop());
+                    }
+                }
+                break;
+
+            case OPERATOR:
+                // While there is an operator token, o2, at the top of the operator stack, and
+                // either
+                // - o1 is left-associative and its precedence is less than or equal to that of o2
+                // - o1 is right associative, and has precedence less than that of o2
+                // then pop o2 off the operator stack, onto the output queue.
+                while (!stack.isEmpty()) {
+                    Definition topDefinition = stack.peek().getDefinition();
+                    if (topDefinition.getType() != Type.OPERATOR) {
+                        break;
+                    } else if ((definition.getAssociativity() == Associativity.LEFT
+                                && definition.getPrecedence() <= topDefinition.getPrecedence())
+                            || (definition.getAssociativity() == Associativity.RIGHT
+                                && definition.getPrecedence() < topDefinition.getPrecedence())) {
+                        listener.onOutput(stack.pop());
+                    }
+                }
+                // Push o1 onto the operator stack.
+                stack.push(token);
+                break;
+
+            case LEFT_PARENTHESIS:
+                // Push it onto the stack.
+                stack.push(token);
+                break;
+
+            case RIGHT_PARENTHESIS:
+                // Until the token at the top of the stack is a left parenthesis, pop operators off
+                // the stack onto the output queue.
+                while (true) {
+                    if (stack.isEmpty()) {
+                        // If the stack runs out without finding a left parenthesis, then there are
+                        // mismatched parentheses.
+                        notifyFailed(token, Failure.MISMATCHED_PARENTHESIS);
+                        break;
+                    }
+                    if (stack.peek().getDefinition().getType() == Type.LEFT_PARENTHESIS) {
+                        break;
+                    } else {
+                        listener.onOutput(stack.pop());
+                    }
+                }
+                if (failed) {
+                    break;
+                }
+                // Pop the left parenthesis from the stack, but not onto the output queue.
+                stack.pop();
+                // If the token at the top of the stack is a function token, pop it onto the output
+                // queue.
+                if (!stack.isEmpty() && stack.peek().getDefinition().getType() == Type.FUNCTION) {
+                    listener.onOutput(stack.pop());
+                }
+                break;
+        }
+    }
+
+    public void onNoMoreToken() {
+
+        checkFailed();
+
+        // While there are still operator tokens in the stack:
+        while (!stack.isEmpty()) {
+            // If the operator token on the top of the stack is a parenthesis, then there are
+            // mismatched parentheses.
+            Type type = stack.peek().getDefinition().getType();
+            if (type == Type.LEFT_PARENTHESIS || type == Type.RIGHT_PARENTHESIS) {
+                notifyFailed(null, Failure.MISMATCHED_PARENTHESIS);
+                break;
+            }
+            // Pop the operator onto the output queue.
+            listener.onOutput(stack.pop());
+        }
+
+        listener.onCompleted();
+    }
+
+    public void reset() {
+        failed = false;
+        stack.clear();
     }
 
     /**
-     * Return a parse tree derived from the input terminals.
-     *
-     * @param terminalList The list of terminals.
-     * @return A parse tree.
-     * @throws IllegalInputException If any input cannot be parsed.
+     * Type of a token.
      */
-    public ParseTreeNode parse(List<Terminal> terminalList) throws IllegalInputException {
-        return parseInternal(terminalList, 0, startSymbolType, true).node;
+    public enum Type {
+        NUMBER,
+        FUNCTION,
+        FUNCTION_ARGUMENT_SEPARATOR,
+        OPERATOR,
+        LEFT_PARENTHESIS,
+        RIGHT_PARENTHESIS
     }
 
-    private ParseResult parseInternal(List<Terminal> terminalList, int position,
-                                      Enum<?> targetSymbolType, boolean shouldConsumeAll)
-            throws IllegalInputException {
-
-        // Check end of input.
-        if (position >= terminalList.size()) {
-                throw new IllegalInputException("No more terminal when trying to parse symbol type "
-                    + targetSymbolType);
-        }
-
-        // Test for a direct match.
-        Terminal firstTerminal = terminalList.get(position);
-        if (firstTerminal.getType() == targetSymbolType) {
-            if (shouldConsumeAll && position < terminalList.size() - 1) {
-                throw new IllegalInputException(
-                        "Cannot consume all the input because target symbol type is terminal "
-                                + targetSymbolType + " at position " + position);
-            }
-            return new ParseResult(new ParseTreeNode(firstTerminal), position + 1);
-        }
-
-        // Parse by rules.
-        List<List<Enum<?>>> ruleList = ruleSet.get(targetSymbolType);
-        if (ruleList != null) {
-            // Allocate only one ArrayList before the loop.
-            ArrayList<ParseTreeNode> children = new ArrayList<>();
-            for (List<Enum<?>> rule : ruleList) {
-                boolean matched = true;
-                children.clear();
-                int nextPosition = position;
-                for (int i = 0; i < rule.size(); ++i) {
-                    try {
-                        ParseResult result = parseInternal(terminalList, nextPosition,
-                                rule.get(i), shouldConsumeAll && i == rule.size() - 1);
-                        children.add(result.node);
-                        nextPosition = result.position;
-                    } catch (IllegalInputException e) {
-                        matched = false;
-                        break;
-                    }
-                }
-                if (matched) {
-                    // Successful match.
-                    return new ParseResult(new ParseTreeNode(
-                            new Nonterminal(targetSymbolType), children), nextPosition);
-                }
-            }
-        }
-
-        throw new IllegalInputException("No applicable rule to parse symbol type "
-                + targetSymbolType + " at position " + position);
+    /**
+     * Associativity of an operator.
+     */
+    public enum Associativity {
+        LEFT,
+        RIGHT
     }
 
-    private static class ParseResult {
+    /**
+     * Definition of a token.
+     */
+    public interface Definition {
 
-        public ParseTreeNode node;
-        public int position;
+        /**
+         * Get the type of this token.
+         *
+         * @return The type of this token, one of {@link Type}.
+         */
+        Type getType();
 
-        public ParseResult(ParseTreeNode node, int position) {
-            this.node = node;
-            this.position = position;
-        }
+        /**
+         * Get the associativity of this operator. Will not be called if {@link #getType()} did not
+         * return {@link Type#OPERATOR}.
+         *
+         * @return The associativity of this operator.
+         */
+        Associativity getAssociativity();
+
+        /**
+         * Get the precedence of this operator, larger value means higher precedence. Will not be
+         * called if {@link #getType()} did not return {@link Type#OPERATOR}.
+         *
+         * @return The precedence of this operator.
+         */
+        int getPrecedence();
+    }
+
+    /**
+     * A token that can provide its {@link Definition}.
+     */
+    public interface Token {
+
+        /**
+         * Get the definition of this token.
+         *
+         * @return The definition of this token.
+         */
+        Definition getDefinition();
+    }
+
+    public enum Failure {
+        MISPLACE_SEPARATOR_OR_MISMATCHED_PARENTHESIS,
+        MISMATCHED_PARENTHESIS
+    }
+
+    /**
+     * Listener for output, parse completion or failure.
+     */
+    public interface Listener {
+
+        /**
+         * Called upon output of a token.
+         *
+         * @param token The token.
+         */
+        void onOutput(Token token);
+
+        /**
+         * Called when parse completed.
+         */
+        void onCompleted();
+
+        /**
+         * Called when parse failed.
+         *
+         * @param token The token which caused the failure, may be null if it is caused when
+         *              completing the parse.
+         * @param failure The failure occurred.
+         */
+        void onFailed(Token token, Failure failure);
     }
 }

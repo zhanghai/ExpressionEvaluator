@@ -5,6 +5,8 @@
 
 package me.zhanghai.course.java.parser;
 
+import me.zhanghai.course.java.MathToken;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,15 +15,15 @@ import java.util.List;
  */
 public class ParseTreeNode {
 
-    private Symbol symbol;
+    private MathToken symbol;
     private List<ParseTreeNode> children = new ArrayList<>();
 
-    ParseTreeNode(Symbol symbol, List<ParseTreeNode> children) {
+    ParseTreeNode(MathToken symbol, List<ParseTreeNode> children) {
         this.symbol = symbol;
         this.children = children != null ? children : new ArrayList<ParseTreeNode>();
     }
 
-    ParseTreeNode(Symbol symbol) {
+    ParseTreeNode(MathToken symbol) {
         this(symbol, null);
     }
 
@@ -30,7 +32,7 @@ public class ParseTreeNode {
      *
      * @return The symbol of this node.
      */
-    public Symbol getSymbol() {
+    public MathToken getSymbol() {
         return symbol;
     }
 

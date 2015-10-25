@@ -5,12 +5,12 @@
 
 package me.zhanghai.course.java;
 
-import me.zhanghai.course.java.parser.TokenDefinition;
+import me.zhanghai.course.java.parser.Tokenizer;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public enum ExpressionToken implements TokenDefinition {
+public enum ExpressionToken implements Tokenizer.Definition {
 
     NUMBER("\\d+"),
     BINARY_OPERATOR("(\\+|-|\\*|/)"),

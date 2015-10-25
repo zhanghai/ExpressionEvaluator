@@ -9,49 +9,103 @@ import java.util.List;
 import java.util.regex.Matcher;
 
 /**
- * A simple stateless tokenizer implementation.
+ * A simple stateless and whitespace-ignoring tokenizer implementation.
  */
 public class Tokenizer {
 
-    private String input;
-    private List<TokenDefinition> definitionList;
-
-    private int position;
+    private Tokenizer() {}
 
     /**
-     * Create a new {@link Tokenizer}.
+     * Tokenize an input string.
      *
      * @param input The input string.
-     * @param definitionList The definitions of tokens.
+     * @param definitionList Definitions of tokens.
+     * @param listener Listener for new token, tokenization completion or failure.
      */
-    public Tokenizer(String input, List<TokenDefinition> definitionList) {
-        this.input = input;
-        this.definitionList = definitionList;
-    }
+    public static void tokenize(String input, List<Definition> definitionList,
+                                Listener listener) {
 
-    /**
-     * Return the next token from the input string. Throws an {@link IllegalInputException} if
-     * remaining input cannot be tokenized.
-     *
-     * @return The next token.
-     * @throws IllegalInputException If remaining input cannot be tokenized.
-     */
-    public Terminal next() throws IllegalInputException {
+        int position = 0;
 
-        if (position == input.length()) {
-            return null;
-        }
+        while (true) {
 
-        for (TokenDefinition tokenDefinition : definitionList) {
-            Matcher matcher = tokenDefinition.getMatcher(input).region(position, input.length());
-            if (matcher.lookingAt()) {
-                String text = matcher.group();
-                position += text.length();
-                return new Terminal(tokenDefinition.getIdentifier(), text);
+            while (position < input.length() && Character.isWhitespace(input.charAt(position))) {
+                ++position;
+            }
+            if (position == input.length()) {
+                break;
+            }
+
+            boolean matched = false;
+            for (Definition definition : definitionList) {
+                Matcher matcher = definition.getMatcher(input)
+                        .region(position, input.length());
+                if (matcher.lookingAt()) {
+                    String text = matcher.group();
+                    listener.onToken(definition.getIdentifier(), text);
+                    position += text.length();
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                listener.onFailed(position);
+                return;
             }
         }
 
-        throw new IllegalInputException("Unable to tokenize input \"" + input + "\" at position "
-                + position);
+        listener.onCompleted();
+    }
+
+    /**
+     * Definition of one type of token.
+     */
+    public interface Definition {
+
+        /**
+         * Get the identifier for this type of token.
+         *
+         * @return The identifier.
+         */
+        Enum<?> getIdentifier();
+
+        /**
+         * Retrieve a matcher against specified input for this token.
+         *
+         * <p>This method may not be thread-safe, because it may reuse the same instance of
+         * {@link Matcher} to avoid frequent allocation.</p>
+         *
+         * @param input The input to match against.
+         * @return A {@link Matcher} that will match against the input.
+         */
+        Matcher getMatcher(CharSequence input);
+    }
+
+    /**
+     * Listener for new token, tokenization completion or failure.
+     */
+    public interface Listener {
+
+        /**
+         * Called when a new token is available.
+         *
+         * @param identifier The identifier of the new token, as in
+         *                   {@link Definition#getIdentifier()}.
+         * @param text The text of the new token.
+         */
+        void onToken(Enum<?> identifier, String text);
+
+        /**
+         * Called when tokenization completed.
+         */
+        void onCompleted();
+
+        /**
+         * Called when tokenization failed.
+         *
+         * @param position The position where the failure occurred.
+         */
+        void onFailed(int position);
     }
 }
