@@ -77,6 +77,12 @@ public class Evaluator {
                     case DIVIDE:
                         stack.push(left / right);
                         break;
+                    case MODULO:
+                        stack.push(left % right);
+                        break;
+                    case EXPONENT:
+                        stack.push(Math.pow(left, right));
+                        break;
                     default:
                         notifyFailed("Unexpected operator: " + definition);
                 }

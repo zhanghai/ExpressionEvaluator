@@ -18,7 +18,8 @@ public enum TokenDefinition implements Tokenizer.Definition, Parser.Definition {
     SUBTRACT("-", Parser.Type.OPERATOR, Parser.Associativity.LEFT, 0),
     MULTIPLY("\\*", Parser.Type.OPERATOR, Parser.Associativity.LEFT, 1),
     DIVIDE("/", Parser.Type.OPERATOR, Parser.Associativity.LEFT, 1),
-    //EXPONENT("\\^", Type.OPERATOR, Associativity.RIGHT, 2),
+    MODULO("%", Parser.Type.OPERATOR, Parser.Associativity.LEFT, 1),
+    EXPONENT("\\^", Parser.Type.OPERATOR, Parser.Associativity.RIGHT, 2),
     LEFT_PARENTHESIS("\\(", Parser.Type.LEFT_PARENTHESIS),
     RIGHT_PARENTHESIS("\\)", Parser.Type.RIGHT_PARENTHESIS);
 
