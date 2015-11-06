@@ -17,7 +17,6 @@ public class Evaluator {
     private Parser<Token> parser = new Parser<>(new ParserListener());
 
     private LinkedList<Double> stack = new LinkedList<>();
-    private double result;
 
     private Listener listener;
 
