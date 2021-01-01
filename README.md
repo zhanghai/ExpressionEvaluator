@@ -1,3 +1,3 @@
 # ExpressionEvaluator
 
-An expression evaluator, written in Java.
+A shunting-yard algorithm operator-precedence parser implementation in Java.
